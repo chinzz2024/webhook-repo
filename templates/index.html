@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Event Monitor</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; line-height: 1.6; }
+        .container { max-width: 800px; margin: 40px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        #events-list { list-style: none; padding: 0; }
+        #events-list li { background-color: #f7f7f7; padding: 15px; border-radius: 5px; margin-bottom: 10px; font-size: 16px; border-left: 4px solid #0969da; }
+        .author { font-weight: bold; }
+        .branch { background-color: #ddf4ff; color: #0969da; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        .timestamp { color: #666; font-size: 0.85em; display: block; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>GitHub Repository Events</h1>
+        <ul id="events-list">
+            <!-- Events will be loaded here by JavaScript -->
+        </ul>
+    </div>
+
+    <script>
+        // Function to format the date nicely
+        function formatTimestamp(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString('en-US', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+                hour12: true
+            });
+        }
+
+        // Function to fetch and display events
+        async function fetchEvents() {
+            try {
+                const response = await fetch('/events');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const events = await response.json();
+                const eventsList = document.getElementById('events-list');
+                
+                // Clear the list before adding new items
+                eventsList.innerHTML = '';
+
+                if (events.length === 0) {
+                    eventsList.innerHTML = '<li>No events to show yet. Try pushing to the action-repo!</li>';
+                    return;
+                }
+
+                // Create and append list items for each event
+                events.forEach(event => {
+                    const li = document.createElement('li');
+                    let message = '';
+
+                    switch (event.action) {
+                        case 'PUSH':
+                            message = `<span class="author">${event.author}</span> pushed to <span class="branch">${event.to_branch}</span>`;
+                            break;
+                        case 'PULL_REQUEST':
+                            message = `<span class="author">${event.author}</span> submitted a pull request from <span class="branch">${event.from_branch}</span> to <span class="branch">${event.to_branch}</span>`;
+                            break;
+                        case 'MERGE':
+                            message = `<span class="author">${event.author}</span> merged branch <span class="branch">${event.from_branch}</span> to <span class="branch">${event.to_branch}</span>`;
+                            break;
+                        default:
+                            message = 'An unknown event occurred.';
+                    }
+                    
+                    li.innerHTML = `${message}<span class="timestamp">${formatTimestamp(event.timestamp)}</span>`;
+                    eventsList.appendChild(li);
+                });
+            } catch (error) {
+                console.error('Failed to fetch events:', error);
+                const eventsList = document.getElementById('events-list');
+                eventsList.innerHTML = '<li>Error loading events. Check the console.</li>';
+            }
+        }
+
+        // --- Main execution ---
+        // Fetch events immediately on page load
+        fetchEvents();
+
+        // Then, poll for new events every 15 seconds
+        setInterval(fetchEvents, 15000);
+    </script>
+</body>
+</html>
