@@ -6,21 +6,21 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 from datetime import datetime
 
-# Load environment variables from .env file
+
 load_dotenv()
 
 app = Flask(__name__)
 
-# --- Database Connection ---
+
 MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
     raise Exception("MONGO_URI not found in environment variables")
 
 client = MongoClient(MONGO_URI)
-db = client.techstax_db # You can name your database anything
-events_collection = db.events # Collection to store webhook events
+db = client.techstax_db 
+events_collection = db.events 
 
-# --- Main Application Routes ---
+
 
 @app.route('/')
 def index():
@@ -30,10 +30,10 @@ def index():
 @app.route('/events')
 def get_events():
     """API endpoint to fetch stored events from MongoDB."""
-    # Fetch all events, sort by timestamp descending, limit to last 20
+    
     events = list(events_collection.find().sort("timestamp", -1).limit(20))
     
-    # Convert MongoDB's _id to string so it can be sent as JSON
+    
     for event in events:
         event["_id"] = str(event["_id"])
         
@@ -43,7 +43,7 @@ def get_events():
 def github_webhook():
     """Endpoint that receives webhook events from GitHub."""
     
-    # Get the event type from the HTTP headers
+    
     event_type = request.headers.get('X-GitHub-Event')
     payload = request.get_json()
 
@@ -54,7 +54,7 @@ def github_webhook():
     
     event_doc = None
 
-    # 1. Handle PUSH event
+    
     if event_type == 'push':
         pusher = payload.get('pusher', {}).get('name', 'Unknown')
         branch = payload.get('ref', 'refs/heads/unknown').split('/')[-1]
@@ -64,17 +64,17 @@ def github_webhook():
             "request_id": commit_hash,
             "author": pusher,
             "action": "PUSH",
-            "from_branch": None, # Push doesn't have a 'from' branch
+            "from_branch": None, 
             "to_branch": branch,
             "timestamp": datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         }
 
-    # 2. Handle PULL_REQUEST event
+    
     elif event_type == 'pull_request':
         action = payload.get('action')
         pr_data = payload.get('pull_request', {})
         
-        # We only care about opened or closed (merged) pull requests
+        
         if action == 'opened':
             author = pr_data.get('user', {}).get('login', 'Unknown')
             from_branch = pr_data.get('head', {}).get('ref', 'Unknown')
@@ -90,10 +90,9 @@ def github_webhook():
                 "timestamp": pr_data.get('created_at', datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'))
             }
 
-        # 3. Handle MERGE action (Brownie Points!)
-        # A merge is a 'closed' pull request where 'merged' is true
+        
         elif action == 'closed' and pr_data.get('merged') == True:
-            author = pr_data.get('merged_by', {}).get('login', 'Unknown') # User who merged
+            author = pr_data.get('merged_by', {}).get('login', 'Unknown') 
             from_branch = pr_data.get('head', {}).get('ref', 'Unknown')
             to_branch = pr_data.get('base', {}).get('ref', 'Unknown')
             pr_id = str(pr_data.get('id', 'Unknown'))
@@ -107,7 +106,7 @@ def github_webhook():
                 "timestamp": pr_data.get('merged_at', datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'))
             }
 
-    # If we created a document, save it to the database
+    
     if event_doc:
         events_collection.insert_one(event_doc)
         print(f"Successfully stored event: {event_doc['action']}")
@@ -116,5 +115,5 @@ def github_webhook():
         return jsonify({"msg": "Event not relevant or handled"}), 200
 
 if __name__ == '__main__':
-    # Use 0.0.0.0 to make it accessible on your network
+    
     app.run(host='0.0.0.0', port=5000, debug=True)

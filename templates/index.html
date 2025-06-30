@@ -20,12 +20,12 @@
     <div class="container">
         <h1>GitHub Repository Events</h1>
         <ul id="events-list">
-            <!-- Events will be loaded here by JavaScript -->
+            
         </ul>
     </div>
 
     <script>
-        // Function to format the date nicely
+        
         function formatTimestamp(isoString) {
             const date = new Date(isoString);
             return date.toLocaleString('en-US', {
@@ -35,7 +35,7 @@
             });
         }
 
-        // Function to fetch and display events
+    
         async function fetchEvents() {
             try {
                 const response = await fetch('/events');
@@ -45,7 +45,7 @@
                 const events = await response.json();
                 const eventsList = document.getElementById('events-list');
                 
-                // Clear the list before adding new items
+                
                 eventsList.innerHTML = '';
 
                 if (events.length === 0) {
@@ -53,7 +53,7 @@
                     return;
                 }
 
-                // Create and append list items for each event
+                
                 events.forEach(event => {
                     const li = document.createElement('li');
                     let message = '';
@@ -82,11 +82,10 @@
             }
         }
 
-        // --- Main execution ---
-        // Fetch events immediately on page load
+        
         fetchEvents();
 
-        // Then, poll for new events every 15 seconds
+    
         setInterval(fetchEvents, 15000);
     </script>
 </body>
